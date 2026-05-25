@@ -95,7 +95,7 @@ export default function Settings() {
     }
   };
 
-  const handleSaveSupabase = () => {
+  const handleSaveSupabase = async () => {
     if (!supabaseUrl.trim() || !supabaseKey.trim()) {
       saveSupabaseConfig(null);
       setActionFeedback({ type: 'success', message: 'Credentials cleared. Supabase deactivated.' });
@@ -116,11 +116,23 @@ export default function Settings() {
       }
 
       saveSupabaseConfig({ url: urlString, anonKey: supabaseKey.trim() });
-      setActionFeedback({ type: 'success', message: 'Supabase credentials saved successfully!' });
+      setActionFeedback({ type: 'success', message: 'Supabase credentials saved! Auto-syncing local storage database to cloud...' });
+      
       // Trigger event to notify sync engine
       window.dispatchEvent(new Event('inven_localstorage_sync'));
+
+      try {
+        const result = await syncAllToSupabase();
+        if (result.success) {
+          setActionFeedback({ type: 'success', message: 'Success! Your existing local collections are fully synced and auto-uploaded to Supabase automatically.' });
+        } else {
+          setActionFeedback({ type: 'error', message: `Supabase configured, but auto-upload of some tables failed: ${result.message}` });
+        }
+      } catch (err: any) {
+        setActionFeedback({ type: 'error', message: `Automatic initial push failed: ${err?.message || err}` });
+      }
     }
-    setTimeout(() => setActionFeedback(null), 3000);
+    setTimeout(() => setActionFeedback(null), 5000);
   };
 
   const handleManualPush = async () => {
@@ -1384,6 +1396,15 @@ UPDATE public.inven_sync SET updated_at = NOW() WHERE key IN (
             <p className="text-xs font-semibold text-slate-500 leading-relaxed">
               Keep all your inventories, supplier registries, custom invoices, production tasks, and financial records securely synchronized across browsers in real-time.
             </p>
+
+            {syncStatus !== 'not-configured' && (
+              <div className="bg-emerald-50/60 border border-emerald-100 p-3.5 rounded-2xl flex items-start gap-2.5">
+                <span className="text-emerald-600 text-[12px] mt-0.5">✨</span>
+                <div className="text-[10px] text-slate-600 leading-relaxed font-semibold">
+                  <span className="text-emerald-800 font-extrabold block">Instant Real-Time Cloud Save is active:</span> Everything you add, edit, or delete anywhere in this application is automatically saved to Supabase in the background! You never need to click any manual push button.
+                </div>
+              </div>
+            )}
 
             {/* Input credentials */}
             <div className="space-y-4">
