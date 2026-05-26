@@ -1401,8 +1401,8 @@ export default function Invoice({
       )}
       {/* Sale Dialog */}
       {isSaleDialogOpen && activeBatch && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
               <div>
                 <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Record Sale</h3>
@@ -1975,8 +1975,8 @@ export default function Invoice({
       )}
 
       {isPaymentDialogOpen && paymentInvoice && (
-        <div className="fixed inset-0 z-[185] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 p-8 flex flex-col relative">
+        <div className="fixed inset-0 z-[185] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar animate-in zoom-in-95 duration-200 p-8 flex flex-col relative">
             <button 
               onClick={() => {
                 setIsPaymentDialogOpen(false);
