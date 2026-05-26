@@ -78,7 +78,7 @@ export default function ProductionUnits({
     inventoryItemId: '',
     unit: '',
     size: 'XL',
-    items: [{ modelName: '', quantity: 0, rate: 0 }],
+    items: [{ modelName: '', quantity: 0, rate: 0, size: 'XL' }],
     status: 'Assigned',
     allPiecesDelivered: false,
     allMetersDelivered: false,
@@ -99,7 +99,7 @@ export default function ProductionUnits({
         unit: unitMaster[0]?.name || '', 
         inventoryItemId: '',
         size: 'XL', 
-        items: [{ modelName: '', quantity: 0, rate: 0 }],
+        items: [{ modelName: '', quantity: 0, rate: 0, size: 'XL' }],
         status: 'Assigned',
         allPiecesDelivered: false,
         allMetersDelivered: false,
@@ -180,7 +180,7 @@ export default function ProductionUnits({
   const addItemRow = () => {
     setFormData((prev: any) => ({
       ...prev,
-      items: [...prev.items, { modelName: '', quantity: 0, rate: 0 }]
+      items: [...prev.items, { modelName: '', quantity: 0, rate: 0, size: prev.size || 'XL' }]
     }));
   };
 
@@ -283,6 +283,7 @@ export default function ProductionUnits({
             modelName: item.modelName, 
             quantity: item.quantity, 
             rate: item.rate,
+            size: item.size || formData.size || a.size || 'XL',
             fabricType,
             status,
             allPiecesDelivered: allDeliveredPieces,
@@ -367,7 +368,7 @@ export default function ProductionUnits({
           inventoryItemId: formData.inventoryItemId,
           customerId: formData.customerId,
           unit: formData.unit,
-          size: formData.size,
+          size: item.size || formData.size || 'XL',
           modelName: item.modelName,
           quantity: item.quantity,
           rate: item.rate,
@@ -412,7 +413,7 @@ export default function ProductionUnits({
       unit: unitMaster[0]?.name || '', 
       inventoryItemId: '',
       size: 'XL', 
-      items: [{ modelName: '', quantity: 0, rate: 0 }],
+      items: [{ modelName: '', quantity: 0, rate: 0, size: 'XL' }],
       status: 'Assigned',
       allPiecesDelivered: false,
       allMetersDelivered: false,
@@ -517,7 +518,7 @@ export default function ProductionUnits({
               unit: unitMaster[0]?.name || '', 
               inventoryItemId: '',
               size: 'XL', 
-              items: [{ modelName: '', quantity: 0, rate: 0 }],
+              items: [{ modelName: '', quantity: 0, rate: 0, size: 'XL' }],
               status: 'Assigned',
               allPiecesDelivered: false,
               allMetersDelivered: false,
@@ -829,7 +830,7 @@ export default function ProductionUnits({
                             paymentDate: item.paymentDate || new Date().toISOString().split('T')[0],
                             finishedPieces: derivedFinishedPieces,
                             finishedMeters: derivedFinishedMeters,
-                            items: [{ modelName: item.modelName, quantity: totalQty, rate: item.rate }]
+                            items: [{ modelName: item.modelName, quantity: totalQty, rate: item.rate, size: item.size || 'XL' }]
                           });
                           setIsFormOpen(true);
                         }}
@@ -1020,7 +1021,7 @@ export default function ProductionUnits({
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-10 gap-x-4 gap-y-4">
                         {/* Model Select */}
-                        <div className="space-y-2 lg:col-span-5">
+                        <div className="space-y-2 lg:col-span-4">
                           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Model Name</label>
                           <div className="relative">
                             <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 z-10" />
@@ -1040,16 +1041,65 @@ export default function ProductionUnits({
                                   newRate = model.basePrice;
                                 }
 
-                                // Parse size suffix from selected model name
-                                const nameUpper = newModelName.trim().toUpperCase();
-                                const detectedSize = ['XXL', 'XL', 'L', 'M', 'S'].find(sz => {
-                                  const regex = new RegExp(`\\b${sz}\\b|[-()]${sz}[-()]|[-()]${sz}$|^${sz}$`, 'i');
-                                  return regex.test(nameUpper);
-                                });
+                                // Parse size suffix from selected model name with high precision
+                                const parseSizeFromModelName = (name: string): "S" | "M" | "L" | "XL" | "XXL" | null => {
+                                  if (!name) return null;
+                                  const nameUpper = name.trim().toUpperCase();
+                                  
+                                  // 1. Exact word matches first to avoid false positives (e.g. "Flora Summer XL")
+                                  const sizes: ("XXL" | "XL" | "L" | "M" | "S")[] = ["XXL", "XL", "L", "M", "S"];
+                                  for (const sz of sizes) {
+                                    const rxWord = new RegExp(`\\b${sz}\\b`, "i");
+                                    if (rxWord.test(nameUpper)) return sz;
+                                  }
+                                  
+                                  // 2. Separators: dash, parenthesis, underscore, slash
+                                  for (const sz of sizes) {
+                                    const rxBoundary = new RegExp(`[-()_/\\s\\[\\]]${sz}([-()_/\\s\\[\\]]|$)`, "i");
+                                    if (rxBoundary.test(nameUpper)) return sz;
+                                  }
+
+                                  // 3. Suffix at the end (e.g. FloraXL, SabeenaXXL)
+                                  if (nameUpper.endsWith("XXL")) return "XXL";
+                                  if (nameUpper.endsWith("XL")) return "XL";
+
+                                  // 4. One letter trailing size with casing checks (e.g., AlineL, RiyaM, but not Floral or Slim)
+                                  const trimmed = name.trim();
+                                  const last = trimmed.slice(-1);
+                                  const beforeLast = trimmed.length > 1 ? trimmed.slice(-2, -1) : "";
+                                  if (["S", "M", "L", "s", "m", "l"].includes(last)) {
+                                    const isCapital = last === last.toUpperCase();
+                                    const isBeforeLowerOrDigit = beforeLast && /[a-z0-9]/.test(beforeLast);
+                                    const isBeforeSep = beforeLast && /[-_\s/]/.test(beforeLast);
+                                    if (isBeforeSep || (isCapital && isBeforeLowerOrDigit)) {
+                                      return last.toUpperCase() as any;
+                                    }
+                                  }
+
+                                  // 5. Inclusions with custom boundaries
+                                  for (const sz of sizes) {
+                                    if (nameUpper.includes(" " + sz) || nameUpper.includes("-" + sz) || nameUpper.includes("(" + sz)) {
+                                      return sz;
+                                    }
+                                  }
+
+                                  // 6. Substring match for XL/XXL since they are unique size names
+                                  if (nameUpper.includes("XXL")) return "XXL";
+                                  if (nameUpper.includes("XL")) return "XL";
+
+                                  return null;
+                                };
+
+                                const detectedSize = parseSizeFromModelName(newModelName);
 
                                 setFormData((prev: any) => {
                                   const newItems = [...prev.items];
-                                  newItems[index] = { ...newItems[index], modelName: newModelName, rate: newRate };
+                                  newItems[index] = { 
+                                    ...newItems[index], 
+                                    modelName: newModelName, 
+                                    rate: newRate,
+                                    size: detectedSize || newItems[index].size || prev.size || 'XL'
+                                  };
                                   return {
                                     ...prev,
                                     items: newItems,
@@ -1061,6 +1111,23 @@ export default function ProductionUnits({
                               <option value="">Select a Model</option>
                               {productMaster.filter(p => p && p.name).map(p => (
                                 <option key={p.id} value={p.name}>{p.name} (₹{p.basePrice})</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Nighty Size dropdown per row */}
+                        <div className="space-y-2 lg:col-span-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Nighty Size</label>
+                          <div className="relative">
+                            <select 
+                              required
+                              className="w-full bg-white border border-slate-100 rounded-xl py-3 px-4 text-xs outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-slate-700 shadow-sm appearance-none cursor-pointer"
+                              value={item.size || 'XL'}
+                              onChange={(e) => updateItemRow(index, { size: e.target.value })}
+                            >
+                              {['S', 'M', 'L', 'XL', 'XXL'].map(s => (
+                                <option key={s} value={s}>{s}</option>
                               ))}
                             </select>
                           </div>
@@ -1099,7 +1166,7 @@ export default function ProductionUnits({
                         </div>
 
                         {/* Rate */}
-                        <div className="space-y-2 lg:col-span-3">
+                        <div className="space-y-2 lg:col-span-2">
                           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Rate (₹)</label>
                           <div className="flex gap-2">
                             <input 
