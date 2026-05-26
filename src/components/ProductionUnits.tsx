@@ -1039,7 +1039,23 @@ export default function ProductionUnits({
                                 } else if (model) {
                                   newRate = model.basePrice;
                                 }
-                                updateItemRow(index, { modelName: newModelName, rate: newRate });
+
+                                // Parse size suffix from selected model name
+                                const nameUpper = newModelName.trim().toUpperCase();
+                                const detectedSize = ['XXL', 'XL', 'L', 'M', 'S'].find(sz => {
+                                  const regex = new RegExp(`\\b${sz}\\b|[-()]${sz}[-()]|[-()]${sz}$|^${sz}$`, 'i');
+                                  return regex.test(nameUpper);
+                                });
+
+                                setFormData((prev: any) => {
+                                  const newItems = [...prev.items];
+                                  newItems[index] = { ...newItems[index], modelName: newModelName, rate: newRate };
+                                  return {
+                                    ...prev,
+                                    items: newItems,
+                                    ...(detectedSize ? { size: detectedSize } : {})
+                                  };
+                                });
                               }}
                             >
                               <option value="">Select a Model</option>
