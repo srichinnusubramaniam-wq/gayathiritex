@@ -31,6 +31,38 @@ export default function App() {
     return () => window.removeEventListener('inven_localstorage_sync', handleSync);
   }, []);
 
+  // Sync Supabase settings from server configuration on mount automatically
+  useEffect(() => {
+    const syncServerSupabaseConfig = async () => {
+      try {
+        const response = await fetch('/api/supabase-config');
+        if (response.ok) {
+          const serverConfig = await response.json();
+          if (serverConfig && serverConfig.url && serverConfig.anonKey) {
+            const localConfigStr = localStorage.getItem('inven_supabase_config');
+            let needsUpdate = true;
+            if (localConfigStr) {
+              const localConfig = JSON.parse(localConfigStr);
+              if (localConfig.url === serverConfig.url && localConfig.anonKey === serverConfig.anonKey) {
+                needsUpdate = false;
+              }
+            }
+            if (needsUpdate) {
+              localStorage.setItem('inven_supabase_config', JSON.stringify({
+                url: serverConfig.url,
+                anonKey: serverConfig.anonKey
+              }));
+              window.dispatchEvent(new Event('inven_localstorage_sync'));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not sync default Supabase config from server:', err);
+      }
+    };
+    syncServerSupabaseConfig();
+  }, []);
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':

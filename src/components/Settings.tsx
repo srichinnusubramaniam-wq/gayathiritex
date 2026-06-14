@@ -99,6 +99,15 @@ export default function Settings() {
     if (!supabaseUrl.trim() || !supabaseKey.trim()) {
       saveSupabaseConfig(null);
       setActionFeedback({ type: 'success', message: 'Credentials cleared. Supabase deactivated.' });
+      try {
+        await fetch('/api/supabase-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: '', anonKey: '' }),
+        });
+      } catch (err) {
+        console.error('Failed to clear Supabase config on server:', err);
+      }
     } else {
       const urlString = supabaseUrl.trim();
       let isValid = false;
@@ -118,6 +127,16 @@ export default function Settings() {
       saveSupabaseConfig({ url: urlString, anonKey: supabaseKey.trim() });
       setActionFeedback({ type: 'success', message: 'Supabase credentials saved! Auto-syncing local storage database to cloud...' });
       
+      try {
+        await fetch('/api/supabase-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlString, anonKey: supabaseKey.trim() }),
+        });
+      } catch (err) {
+        console.error('Failed to save Supabase config on server:', err);
+      }
+
       // Trigger event to notify sync engine
       window.dispatchEvent(new Event('inven_localstorage_sync'));
 

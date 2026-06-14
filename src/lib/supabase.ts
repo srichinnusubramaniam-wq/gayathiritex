@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import defaultCredentials from './supabase_credentials.json';
 
 export interface SupabaseConfig {
   url: string;
@@ -37,6 +38,15 @@ export function getSupabaseConfig(): SupabaseConfig | null {
     }
   } catch (err) {
     console.error('Error parsing local Supabase credentials:', err);
+  }
+
+  // Fallback to project-wide credentials file
+  if (defaultCredentials && defaultCredentials.url && defaultCredentials.anonKey) {
+    const u = defaultCredentials.url.trim();
+    const k = defaultCredentials.anonKey.trim();
+    if (u && k && isValidHttpUrl(u)) {
+      return { url: u, anonKey: k };
+    }
   }
   
   return null;
